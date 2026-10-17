@@ -1,5 +1,30 @@
 import json
 
+def admin_panel():
+    password = input('Введите пароль администратора: ')
+    if password != 'Zhjckfd0316':
+        print('Неверный пароль!')
+        return
+    try:
+        with open('orders.json', 'r', encoding='utf-8') as file:
+            orders = json.load(file)
+    except FileNotFoundError:
+        orders = []
+    if len(orders) == 0:
+        print('Заказов пока нет.')
+    else:
+        print('История всех заказов:')
+        number = 1
+        for order in orders:
+            print(f'\n=========Заказ№{number}=========')
+            for name, price in order['products']:
+                print(f'{name} — {price} руб.')
+            print(f"Сумма: {order['total']} руб.")
+            print(f"Оплата: {order['payment']}")
+            print(f"Внесено: {order['money']} руб.")
+            print(f"Сдача: {order['change']} руб.")
+            number += 1
+
 def print_dict(dict):
     for key, value in dict.items():
         cut = value.split(';')
@@ -137,5 +162,15 @@ if total > 0:
     with open('orders.json', 'w', encoding='utf-8') as file:
         json.dump(orders, file, ensure_ascii=False, indent=4)
     print('Заказ сохранён!')
+    print('Хотите открыть панель администратора?')
+    print('1 — Да')
+    print('0 — Нет')
+    admin_choice = input('Ваш выбор: ')
+    if admin_choice == '1':
+        admin_panel()
+    elif admin_choice == '0':
+        print('Спасибо за заказ!')
+    else:
+        print('Неверный выбор.')
 else:
     print('Спасибо, что заглянули к нам!')
