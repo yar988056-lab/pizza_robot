@@ -1,5 +1,7 @@
+import time
 import json
-
+# внизу текст
+# работа от Ярослава Борблика
 def admin_panel():
     password = input('Введите пароль администратора: ')
     if password != 'Zhjckfd0316':
@@ -142,6 +144,7 @@ def make_order():
             payment_method = 'Наличными'
         else:
             input('Приложите к карту к терминалу: (нажмите Enter, чтобы продолжить...)')
+            time.sleep(2.5)
             print('Оплата успешно выполнена!')
             payment_method = 'Карта'
             money = total
@@ -177,3 +180,10 @@ elif choice == '3':
     print('До свидания!')
 else:
     print('Неверный выбор.')
+
+
+
+
+
+# дз робот пицце-мейкер.
+# если что, когда в оплате картой после нажатия Enter зависает специально программа, метод Time
