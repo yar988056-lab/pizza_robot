@@ -21,21 +21,16 @@ alco_menu = {
     '38': 'текила;600', '39': 'пиво;250', '40': 'ликёр;570',
 }
 
-# --- Склад ---
 stock = {}
 for k in ingredients.keys():
     stock[k] = 50
 for k in alco_menu.keys():
     stock[k] = 15.0
 
-# --- Доставка ---
 items_in_delivery = set()
 DELIVERY_TIME_SECONDS = 10 * 60
-
-# --- НОВОЕ: Переменные для печек ---
-TOTAL_OVENS = 5  # Общее количество печек
-busy_ovens = 0  # Сколько печек занято прямо сейчас
-
+TOTAL_OVENS = 5
+busy_ovens = 0
 
 def load_orders() -> list:
     try:
@@ -44,26 +39,21 @@ def load_orders() -> list:
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 
-
 def save_orders(orders: list) -> None:
     with open('orders.json', 'w', encoding='utf-8') as file:
         json.dump(orders, file, ensure_ascii=False, indent=4)
-
 
 def print_dict(menu: dict) -> None:
     for key, value in menu.items():
         name, price = value.split(';')
         print(f'{key}) {name} - {price} руб.')
 
-
 order_queue = asyncio.Queue()
 oven_queue = asyncio.Queue()
 order_counter = 0
 
-
 async def async_input(prompt: str) -> str:
     return await asyncio.to_thread(input, prompt)
-
 
 async def delivery_truck(item_id: str) -> None:
     if item_id in ingredients:
@@ -74,14 +64,11 @@ async def delivery_truck(item_id: str) -> None:
         name = alco_menu[item_id].split(';')[0]
         amount = 15.0
         unit = 'л.'
-
-    print(f"\n🚚 [ДОСТАВКА] Внимание! {name} закончился. Грузовик выехал, ожидайте 10 минут...")
+    print(f"\n(ДОСТАВКА) Внимание! {name} закончился. Грузовик выехал, ожидайте 10 минут...")
     await asyncio.sleep(DELIVERY_TIME_SECONDS)
-
     stock[item_id] += amount
     items_in_delivery.remove(item_id)
-    print(f"\n📦 [ДОСТАВКА] Грузовик привез {name}! На складе снова {stock[item_id]} {unit}.")
-
+    print(f"\n(ДОСТАВКА) Грузовик приехал. На складе снова {stock[item_id]} {unit}.")
 
 async def oven(oven_name: str, queue: asyncio.Queue) -> None:
     global busy_ovens
@@ -91,8 +78,7 @@ async def oven(oven_name: str, queue: asyncio.Queue) -> None:
         if task is None:
             queue.task_done()
             break
-
-        busy_ovens += 1  # Печка начала работу
+        busy_ovens += 1
         order, ready_event = task
         try:
             bake_time = random.uniform(3.0, 15.0)
@@ -100,9 +86,8 @@ async def oven(oven_name: str, queue: asyncio.Queue) -> None:
             await asyncio.to_thread(save_order_to_file, order)
             ready_event.set()
         finally:
-            busy_ovens -= 1  # Печка освободилась
+            busy_ovens -= 1
             queue.task_done()
-
 
 async def waiter(waiter_name: str, order_q: asyncio.Queue, oven_q: asyncio.Queue, stats: dict) -> None:
     while True:
@@ -118,12 +103,10 @@ async def waiter(waiter_name: str, order_q: asyncio.Queue, oven_q: asyncio.Queue
         stats[waiter_name] = stats.get(waiter_name, 0) + 1
         order_q.task_done()
 
-
 def save_order_to_file(order: dict) -> None:
     orders = load_orders()
     orders.append(order)
     save_orders(orders)
-
     async def start_kitchen(waiters_count: int = 6, ovens_count: int = TOTAL_OVENS) -> tuple[list, dict]:
         stats = {}
         ovens = [
@@ -135,7 +118,6 @@ def save_order_to_file(order: dict) -> None:
             for i in range(1, waiters_count + 1)
         ]
         return waiters + ovens, stats
-
     async def stop_kitchen(all_tasks: list, waiters_count: int = 6, ovens_count: int = TOTAL_OVENS) -> None:
         await order_queue.join()
         await oven_queue.join()
@@ -144,14 +126,12 @@ def save_order_to_file(order: dict) -> None:
         for _ in range(ovens_count):
             await oven_queue.put(None)
         await asyncio.gather(*all_tasks)
-
     async def safe_int_async(prompt: str) -> int:
         while True:
             try:
                 return int(await async_input(prompt))
             except ValueError:
                 print('Ошибка! Введите целое число.')
-
     async def choose_products_async(menu: dict) -> list:
         while True:
             order_input = await async_input('Ваш заказ (номера через пробел, 0 — закончить): ')
@@ -162,17 +142,11 @@ def save_order_to_file(order: dict) -> None:
                 print('Ошибка. Есть несуществующие номера.')
                 continue
             return order
-
     async def make_order() -> None:
         global order_counter
-
-        # --- НОВАЯ ПРОВЕРКА: Свободны ли печки? ---
-        # Если занятые печки + заказы, стоящие в очереди к печкам, >= их общего количества, отменяем заказ
         if busy_ovens + oven_queue.qsize() >= TOTAL_OVENS:
-            print("\n❌ Извините, но все печки сейчас заняты. Заказ отменен. Попробуйте позже.")
+            print("\nИзвините, но все печки сейчас заняты. Заказ отменен. Попробуйте позже.")
             return
-        # ------------------------------------------
-
         user_age = await safe_int_async('Сколько вам лет? ')
         if user_age <= 0:
             print('Неверный возраст.')
@@ -182,27 +156,22 @@ def save_order_to_file(order: dict) -> None:
             print('\nВзрослым - алко-меню:')
             print_dict(alco_menu)
         peoples = await safe_int_async('Сколько пицц хотите заказать? ')
-
         total = 0
         user_order = []
         order_ids = []
-
         for q in range(1, peoples + 1):
             print(f'\nПицца - {q}')
             print('Меню ингредиентов:')
             print_dict(ingredients)
             products_ids = await choose_products_async(menu)
-
             for num in products_ids:
                 name, price = menu[num].split(';')
                 user_order.append((name, int(price)))
                 order_ids.append(num)
                 total += int(price)
-
         if not user_order:
             print('Вы ничего не заказали. Спасибо, что заглянули!')
             return
-
         required = {}
         for item_id in order_ids:
             if item_id in ingredients:
@@ -216,24 +185,21 @@ def save_order_to_file(order: dict) -> None:
         for item_id, amount in required.items():
             if stock[item_id] < amount:
                 item_name = menu[item_id].split(';')[0]
-                print(f"\n❌ Ошибка! На складе недостаточно: {item_name}.")
+                print(f"\nОшибка! На складе недостаточно: {item_name}.")
                 print(f"Требуется: {amount}, в наличии: {stock[item_id]}. Заказ отменен.")
                 if stock[item_id] <= 0 and item_id not in items_in_delivery:
                     items_in_delivery.add(item_id)
                     asyncio.create_task(delivery_truck(item_id))
                 return
-
         for item_id, amount in required.items():
             stock[item_id] -= amount
             if stock[item_id] <= 0 and item_id not in items_in_delivery:
                 items_in_delivery.add(item_id)
                 asyncio.create_task(delivery_truck(item_id))
-
         print('\nВаш заказ:')
         for name, price in user_order:
             print(f'{name} — {price} руб.')
         print(f'\nОбщая сумма: {total} руб.')
-
         print('Выберите способ оплаты:')
         print('1 — наличными')
         print('2 — картой')
@@ -241,7 +207,6 @@ def save_order_to_file(order: dict) -> None:
         while payment not in ('1', '2'):
             print('Ошибка! Выберите 1 или 2.')
             payment = await async_input('')
-
         if payment == '1':
             money = await safe_int_async('Введите сумму, которую даёте: ')
             while money < total:
@@ -258,10 +223,8 @@ def save_order_to_file(order: dict) -> None:
             payment_method = 'Карта'
             money = total
             change = 0
-
         print('Спасибо за заказ! Приятного аппетита!')
         print('Ваш заказ передан на кухню. Ожидайте...')
-
         order_counter += 1
         order_data = {
             'id': order_counter,
@@ -272,20 +235,17 @@ def save_order_to_file(order: dict) -> None:
             'change': change,
         }
         order_queue.put_nowait(order_data)
-
     async def admin_panel() -> None:
         password = await async_input('Введите пароль администратора: ')
         if password != admin_password:
             print('Неверный пароль!')
             return
-
         while True:
             print('\n--- Панель администратора ---')
             print('1 - История всех заказов')
             print('2 - Остатки на складе')
             print('3 - Выход из панели')
             choice = await async_input('Ваш выбор: ')
-
             if choice == '1':
                 orders = load_orders()
                 if not orders:
@@ -306,19 +266,18 @@ def save_order_to_file(order: dict) -> None:
                 for k, v in stock.items():
                     if k in ingredients:
                         name = ingredients[k].split(';')[0]
-                        delivery_mark = " 🚚 (в пути)" if k in items_in_delivery else ""
+                        delivery_mark = '(в пути)' if k in items_in_delivery else ''
                         print(f'  {name}: {v} шт.{delivery_mark}')
                 print('\nАлкоголь:')
                 for k, v in stock.items():
                     if k in alco_menu:
                         name = alco_menu[k].split(';')[0]
-                        delivery_mark = " 🚚 (в пути)" if k in items_in_delivery else ""
+                        delivery_mark = '(в пути)' if k in items_in_delivery else ''
                         print(f'  {name}: {v} л.{delivery_mark}')
             elif choice == '3':
                 break
             else:
                 print('Неверный выбор.')
-
     async def main() -> None:
         print('Приветствуем вас в нашей пиццерие!')
         all_tasks, stats = await start_kitchen(waiters_count=6, ovens_count=TOTAL_OVENS)
